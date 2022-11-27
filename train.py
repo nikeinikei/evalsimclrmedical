@@ -5,10 +5,11 @@ from typing import Optional, Callable, Any
 import torch
 import torchvision
 
-
 from simclr import SimCLR
 from simclr.modules import NT_Xent, get_resnet
 from simclr.modules.transformations import TransformsSimCLR
+
+import wandb
 
 
 image_size = 64
@@ -46,6 +47,8 @@ class ChexpertSmallV1(torchvision.datasets.VisionDataset):
 
 
 def main(args):
+    wandb.init(project="seminar", config=args)
+
     batch_size = args.batch_size
 
     learning_rate = args.learning_rate
@@ -55,11 +58,18 @@ def main(args):
     chexpert = ChexpertSmallV1("", transform=TransformsSimCLR(image_size))
     data_loader = torch.utils.data.DataLoader(chexpert, batch_size=batch_size, shuffle=True)
 
+    model_path = "model.pt"
+
     encoder = get_resnet("resnet18", args.pretrained)
+    if args.restore:
+        weights = torch.load(model_path)
+        encoder.load_state_dict(weights)
     n_features = encoder.fc.in_features
 
     model = SimCLR(encoder, args.projection_dim, n_features)
     model.to(device)
+
+    wandb.watch(model)
 
     optimizer = torch.optim.Adam(model.parameters(), learning_rate)
 
@@ -83,3 +93,8 @@ def main(args):
             loss_epoch += loss.item()
         
         print("Epoch {}: loss {}".format(epoch, loss_epoch))
+        wandb.log({
+            "loss": loss_epoch
+        })
+
+    torch.save(model.state_dict(), model_path)
