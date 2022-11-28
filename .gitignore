@@ -1,3 +1,4 @@
 CheXpert-v1.0-small
 __pycache__
 wandb
+*.pt

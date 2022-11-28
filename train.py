@@ -26,6 +26,7 @@ class ChexpertSmallV1(torchvision.datasets.VisionDataset):
         with open(os.path.join(root, "CheXpert-v1.0-small", "train.csv")) as csvfile:
             reader = csv.reader(csvfile, delimiter=",")
             self.labels = next(reader)
+            self.num_classes = len(self.labels) - 1
             self.imageLabels = []
             for row in reader:
                 self.imageLabels.append(row[0])
@@ -87,11 +88,12 @@ def main(args):
             h_i, h_j, z_i, z_j = model(x_i, x_j)
 
             loss = criterion(z_i, z_j)
+            loss.backward()
 
             optimizer.step()
 
             loss_epoch += loss.item()
-        
+
         print("Epoch {}: loss {}".format(epoch, loss_epoch))
         wandb.log({
             "loss": loss_epoch
