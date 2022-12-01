@@ -2,9 +2,12 @@ from argparse import ArgumentParser
 
 import torch
 import torchvision
+
 from simclr.modules import get_resnet
 
-from train import ChexpertSmallV1
+import wandb
+
+from dataset import ChexpertSmallV1
 
 
 class Classifier(torch.nn.Module):
@@ -23,6 +26,9 @@ class Classifier(torch.nn.Module):
 
 
 def main(args):
+    if args.no_dr_run:
+        wandb.init(project="seminar-supervised", config=args)
+
     device = torch.device("cuda")
 
     dataset = ChexpertSmallV1(args.chexpert_path, transform=torchvision.transforms.ToTensor(), max_images=2**14)
@@ -38,6 +44,8 @@ def main(args):
 
     model = Classifier(encoder, num_features=num_features, num_classes=18)
     model.to(device)
+
+    wandb.watch(model)
 
     optimizer = torch.optim.Adam(model.parameters(), args.learning_rate)
 
@@ -60,6 +68,8 @@ def main(args):
             loss_epoch += loss.sum().item()
 
         print("Epoch {}: loss {}".format(epoch, loss_epoch))
+        if args.no_dry_run:
+            wandb.log({"loss": loss_epoch})
 
     torch.save(model.state_dict(), "model_supervised.pt")
 
@@ -70,5 +80,6 @@ if __name__=="__main__":
     parser.add_argument("--batch_size", action="store", type=int, default=256)
     parser.add_argument("--learning_rate", action="store", type=float, default=1e-4)
     parser.add_argument("--epochs", action="store", type=int, default=100)
+    parser.add_argument("--no_dry_run", action="store_true")
     args = parser.parse_args()
     main(args)
