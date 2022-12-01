@@ -26,7 +26,7 @@ class Classifier(torch.nn.Module):
 
 
 def main(args):
-    if args.no_dr_run:
+    if args.no_dry_run:
         wandb.init(project="seminar-supervised", config=args)
 
     device = torch.device("cuda")
@@ -39,13 +39,14 @@ def main(args):
     num_features = encoder.fc.in_features
     encoder.fc = torch.nn.Identity()
 
-    weights = torch.load("model.pt")
+    weights = torch.load(args.input)
     encoder.load_state_dict(weights)
 
     model = Classifier(encoder, num_features=num_features, num_classes=18)
     model.to(device)
 
-    wandb.watch(model)
+    if args.no_dry_run:
+        wandb.watch(model)
 
     optimizer = torch.optim.Adam(model.parameters(), args.learning_rate)
 
@@ -71,7 +72,7 @@ def main(args):
         if args.no_dry_run:
             wandb.log({"loss": loss_epoch})
 
-    torch.save(model.state_dict(), "model_supervised.pt")
+    torch.save(model.state_dict(), args.output)
 
 
 if __name__=="__main__":
@@ -81,5 +82,7 @@ if __name__=="__main__":
     parser.add_argument("--learning_rate", action="store", type=float, default=1e-4)
     parser.add_argument("--epochs", action="store", type=int, default=100)
     parser.add_argument("--no_dry_run", action="store_true")
+    parser.add_argument("input", action="store", type=str)
+    parser.add_argument("output", action="store", type=str)
     args = parser.parse_args()
     main(args)
