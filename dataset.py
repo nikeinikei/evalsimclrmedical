@@ -108,13 +108,18 @@ class ChexpertSmallV1(torchvision.datasets.VisionDataset):
     """
         The small version of the CheXpert dataset, ready to be used for supervised learning
     """
-    def __init__(self, root: str, max_images: Optional[int] = None, transforms: Optional[Callable] = None, transform: Optional[Callable] = None, target_transform: Optional[Callable] = None) -> None:
+    def __init__(self, root: str, max_images: Optional[int] = None, validation: bool = False, transforms: Optional[Callable] = None, transform: Optional[Callable] = None, target_transform: Optional[Callable] = None) -> None:
         super().__init__(root, transforms, transform, target_transform)
 
         self.resizeTransform = torchvision.transforms.Resize((image_size, image_size))
         self.toPIL = torchvision.transforms.ToPILImage()
 
-        with open(os.path.join(root, "CheXpert-v1.0-small", "train.csv")) as csvfile:
+        if validation:
+            label_file = "valid.csv"
+        else:
+            label_file = "train.csv"
+
+        with open(os.path.join(root, "CheXpert-v1.0-small", label_file)) as csvfile:
             reader = csv.reader(csvfile, delimiter=",")
             self.labelNames = next(reader)
             self.num_classes = len(self.labelNames) - 1
